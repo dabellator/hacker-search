@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 
@@ -21,35 +21,46 @@ export const debounce = (func, wait, immediate) => {
   };
 };
 
-const HackerSearch = ({ searchResults, getSearchResults, getNextSearchResults }) => {
-  const [currentPage, setCurrentPage] = useState(0);
-  const [searchValue, setSearchValue] = useState('');
-  const [shouldListen, setShouldListen] = useState(true);
+class HackerSearch extends React.Component {
+  constructor(props) {
+    super(props)
 
-  const debounceSearch = debounce(getSearchResults, 500);
+    this.state = {
+      currentPage: 0,
+      searchValue: '',
+      shouldListen: true
+    }
 
-  const handleSearchInput = e => {
-    if (currentPage !== 0) setCurrentPage(0);
-    setSearchValue(e.target.value);
-    debounceSearch(e.target.value);
+    this.debounceSearch = debounce(props.getSearchResults, 500)
   }
 
-  const getNextResults = () => {
-    getNextSearchResults(searchValue, currentPage + 1)
-    setCurrentPage(currentPage + 1);
-    setShouldListen(false);
+  componentDidUpdate() {
+    if((this.props.searchResults.length) === (this.state.currentPage + 1) * 200 && !this.state.shouldListen) {
+      this.setState({ shouldListen: true });
+    }
   }
 
-  if((searchResults.length) === (currentPage + 1) * 200 && !shouldListen) setShouldListen(true);
+  handleSearchInput = e => {
+    if (this.state.currentPage !== 0) this.setState({ currentPage: 0 });
+    this.setState({ searchValue: e.target.value });
+    this.debounceSearch(e.target.value);
+  }
 
-  return (
-    <div className='main-wrapper'>
-      <SearchBar handleSearch={handleSearchInput} searchValue={searchValue} />
-      <InfiniteScroll shouldListen={shouldListen} handleAction={getNextResults}>
-        <List items={searchResults} />
-      </InfiniteScroll>
-    </div>
-  )
+  getNextResults = () => {
+    this.props.getNextSearchResults(this.state.searchValue, this.state.currentPage + 1)
+    this.setState({ currentPage: this.state.currentPage + 1, shouldListen: false});
+  }
+  
+  render() {
+    return (
+      <div className='main-wrapper'>
+        <SearchBar handleSearch={this.handleSearchInput} searchValue={this.state.searchValue} />
+        <InfiniteScroll shouldListen={this.state.shouldListen} handleAction={this.getNextResults}>
+          <List items={this.props.searchResults} />
+        </InfiniteScroll>
+      </div>
+    )
+  }
 }
 
 const mapStateToProps = state => ({
